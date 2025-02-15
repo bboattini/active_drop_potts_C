@@ -10,7 +10,7 @@ PARAM = {
     'a': 0,
     'h': 0,
     'samp_frac': 10,
-    'bin': 1000
+    'bin': 10
 }
 
 def histogram_of(var=None, a=None, h=None):
@@ -61,8 +61,8 @@ def histogram_of(var=None, a=None, h=None):
     #--------------------------------------------------------------------------------------
     # Graphics generator loop
     for f in files_to_read:
-        
-        t, V, Vw, E, bxw, byw, rxw, ryw, txw, tyw, vbw, vrw, vpw, x_CM, y_CM, z_CM = np.loadtxt(f, unpack=True)
+        # t, V, Vw, E, B_x, B_y, Rx, Ry, theta_x, theta_y, vb, nulo1, nulo2, x_CM_o, y_CM_o, z_CM_o
+        t, V, Vw, E, bxw, byw, rxw, ryw, txw, tyw, vbw, nulo1, nulo2, x_CM, y_CM, z_CM = np.loadtxt(f, unpack=True)
         
         if PARAM['var'] == 'theta':
             xTS = txw
@@ -77,7 +77,8 @@ def histogram_of(var=None, a=None, h=None):
             labeling_x = r"$B_x$"
             labeling_y = r"$B_y$"
         elif PARAM['var'] == 'Vp':
-            xTS = vbw
+            PARAM['bin'] = 1000
+            xTS = vbw/Vw
             yTS = []
             x_limits = (0, 0.2)
             labeling_x = r"$V_f$"
@@ -102,18 +103,19 @@ def histogram_of(var=None, a=None, h=None):
         plt.subplot(2,columns,N+fo_loc)
 
         xTS = xTS[sample:]
-        if not yTS==[]:
+        if not len(yTS)==0:
             yTS = yTS[sample:]
 
         plt.yscale("log")
         xTS_freq = af.time_series_to_frequency_array(xTS, bin = PARAM['bin'])
-        if not yTS==[]:
+        if not len(yTS)==0:
             yTS_freq = af.time_series_to_frequency_array(yTS, bin = PARAM['bin'])
         else:
             yTS_freq = np.array([[0, 0]])
         maximum = np.max(np.append(np.max(xTS_freq[:,1]), np.max(yTS_freq[:,1])))
+        
         plt.bar(xTS_freq[:,0], xTS_freq[:,1]/maximum, color='b', width = 1/PARAM['bin'], align='center', label=labeling_x)
-        if not yTS==[]:
+        if not len(yTS)==0:
             plt.bar(yTS_freq[:,0], yTS_freq[:,1]/maximum, color='g', width = 1/PARAM['bin'], align='center', label=labeling_y)
 
         plt.xlim(x_limits)
@@ -124,8 +126,10 @@ def histogram_of(var=None, a=None, h=None):
         if PARAM['var']=='Vp':
             means = np.array([np.mean(xTS)])
             stds = np.array([np.std(xTS)])
+            
             with open(f"{save_dir}/{PARAM['var']}_means_h_{PARAM['h']}_a_{PARAM['a']}.txt", 'a') as out:
                 out.write(f"{state}, {fo}, {means}, {stds}\n")
+            
 
     #--------------------------------------------------------------------------------
     # Final adjustments
@@ -133,4 +137,10 @@ def histogram_of(var=None, a=None, h=None):
     fig.savefig(f"{save_dir}/{PARAM['var']}_hist_h_{PARAM['h']}_a{PARAM['a']}.pdf", format='pdf')
     print("-----------------------------------End------------------------------------\n")
 
+histogram_of(var='Vp', a=5, h=10)
+histogram_of(var='Vp', a=6, h=10)
+histogram_of(var='Vp', a=7, h=10)
 histogram_of(var='Vp', a=8, h=10)
+histogram_of(var='Vp', a=9, h=10)
+histogram_of(var='Vp', a=10, h=10)
+histogram_of(var='Vp', a=11, h=10)
