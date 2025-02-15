@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import app.aux_func as af
 import os
 from typing import Dict, List, Optional, Union
+import warnings
+warnings.filterwarnings("ignore")
 
 PATH = str(os.path.abspath(__file__))
 PATH = PATH.replace(PATH.split("/")[-1], "")
@@ -20,6 +22,7 @@ G_DICT['8'] = 'a=8'
 
 def MSD_plotter(state=None, a=None, h=None, limit=None):
     print("-----------------------------------Start----------------------------------\n")
+    #measures = af.file_crawler()['r2']
     measures = af.file_crawler()['measures']
     print(f"Files: {len(measures)}\n")
     # Check if there is a "msd_files" folder in this directory in PATH
@@ -54,6 +57,7 @@ def MSD_plotter(state=None, a=None, h=None, limit=None):
     limit = [float(i) for i in limit.split()]
     limit = np.sort(np.array(limit))
     print("\nlimit: "+str(limit))
+    print("\nfo_values: "+str(fo_values))
     limit_index = np.array([i for i in range(len(fo_values)) if fo_values[i] in limit]) +1
     print("limit_index: "+str(limit_index))
 
@@ -87,9 +91,9 @@ def MSD_plotter(state=None, a=None, h=None, limit=None):
     plt.xscale("log")
     plt.xlim(0, dt[-1]/10)
     gide = np.arange(1, 10, 1)
-    plt.plot(gide, 0.12*gide*gide, 'k--', label='slope = 2')
+    plt.plot(gide, 0.12*gide*gide, 'k--', label=r'$\alpha = 2$')
     gide = np.arange(50, 500, 1)
-    plt.plot(gide, 0.05*gide, 'k:', label='slope = 1')
+    plt.plot(gide, 0.05*gide, 'k:', label=r'$\alpha = 1$')
 
     # Add labels and legend
     plt.title(f'CM MSD for {G_DICT[a]} and {state}')
@@ -108,10 +112,11 @@ def MSD_plotter(state=None, a=None, h=None, limit=None):
 
 def MSD_fixed_plotter(var, values, limit=None):
     print("-----------------------------------Start----------------------------------\n")
+    #measures = af.file_crawler()['r2']
     measures = af.file_crawler()['measures']
-    fo_values = np.sort(np.unique(np.array([float(af.fo_from_file(f)) for f in measures])))
-    a_values = np.sort(np.unique(np.array([af.a_from_file(f) for f in measures])))
-    h_values = np.sort(np.unique(np.array([af.h_from_file(f) for f in measures])))
+    fo_values = np.sort(np.unique(np.array([float(fo_from_file(f)) for f in measures])))
+    a_values = np.sort(np.unique(np.array([a_from_file(f) for f in measures])))
+    h_values = np.sort(np.unique(np.array([h_from_file(f) for f in measures])))
     CI_values = ['WE', 'CB']
     print(f"Files: {len(measures)}\n")
 
@@ -141,8 +146,7 @@ def MSD_fixed_plotter(var, values, limit=None):
     else:
         msd_files = [f for f in msd_files if int(f.split("_")[search_dict[var]]) in values]
         curve['var'] = 'CI'
-        curve['values'] = ['WE', 'CB']
-    print(msd_files)
+        curve['values'] = ['CB', 'WE']
 
     plt.rcParams.update({'font.size': 13})
     # Create a sub plot with one line and len(fixed['values']) columns
@@ -158,6 +162,7 @@ def MSD_fixed_plotter(var, values, limit=None):
     limit = [float(i) for i in limit.split()]
     limit = np.sort(np.array(limit))
     print("\nlimit: "+str(limit))
+    print("\nfo_values: "+str(fo_values))
     limit_index = np.array([i for i in range(len(fo_values)) if fo_values[i] in limit]) +1
     print("limit_index: "+str(limit_index))
     label_register = []
@@ -186,23 +191,27 @@ def MSD_fixed_plotter(var, values, limit=None):
             cur = msd_file.split("_")[search_dict[curve['var']]].replace('.txt','')
             cur = float(cur) if curve['var'] != 'CI' else cur
             # Plot MSD over time with a label containing the value of a and the defined color
-            ax.plot(dt, msd, af.MARKERS[curve['values'].index(cur)]+"-", label=r'$\mu$'+f"={fo} {curve['var']}={cur}", color=af.COLORS[i-1], markevery = indices, alpha=1/(1+curve['values'].index(cur)))
-        
+            #ax.plot(dt, msd, af.MARKERS[curve['values'].index(cur)]+"-", label=r'$\mu$'+f"={fo} {curve['var']}={cur}", color=af.COLORS[i-1], markevery = indices, alpha=1/(1+curve['values'].index(cur)))
+            ax.plot(dt, msd, label=r'$\mu$'+f"={fo}", color=af.COLORS[i-1], alpha=1/(1+curve['values'].index(cur)))
+            ax.plot(dt[indices], msd[indices], af.MARKERS[curve['values'].index(cur)], color=af.COLORS[i-1], alpha=1/(1+curve['values'].index(cur)))
+            
         if values.index(val) not in label_register:
             ax.set_xlim(1, dt[-1]/10)
+            ax.set_ylim(0.0001,100000000)
+            #ax.set_yticks([0.0001,0,10000,100000000])
             ax.set_yscale("log")
             ax.set_xscale("log")
             gide = np.arange(1, 10, 1)
-            ax.plot(gide, 0.12*gide*gide, 'k--', label='slope = 2')
-            gide = np.arange(50, 500, 1)
-            ax.plot(gide, 0.05*gide, 'k:', label='slope = 1')
+            ax.plot(gide, 1.2*gide*gide, 'k--', label=r'$\alpha = 2$')
+            gide = np.arange(500, 5000, 1)
+            ax.plot(gide, 0.5*gide, 'k:', label=r'$\alpha = 1$')
 
             # Add labels and legend
-            ax.set_title(f"CM MSD for fixed {var}={val}")
+            ax.set_title(f"CM MSD for {var}={val}")
             ax.set_xlabel(r'$\Delta$ t')
             ax.set_ylabel(r'MSD')
             #plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', prop={'size': 5})
-            ax.legend(loc='upper left', prop={'size': 6})
+            ax.legend(loc='upper left', prop={'size': 7.5})
         label_register.append(values.index(val))
     # Create some space on the right side of the plot for the legend
     fig.subplots_adjust(right=0.15)
@@ -216,9 +225,9 @@ def MSD_fixed_plotter(var, values, limit=None):
 def MSD_file_writer(measures):
     # Create a directory to store the files
     os.makedirs(f'{PATH}msd_files', exist_ok=True)
-    h_values = np.sort(np.unique(np.array([af.h_from_file(f) for f in measures])))
-    a_values = np.sort(np.unique(np.array([af.a_from_file(f) for f in measures])))
-    fo_values = np.sort(np.unique(np.array([float(af.fo_from_file(f)) for f in measures])))
+    h_values = np.sort(np.unique(np.array([h_from_file(f) for f in measures])))
+    a_values = np.sort(np.unique(np.array([a_from_file(f) for f in measures])))
+    fo_values = np.sort(np.unique(np.array([float(fo_from_file(f)) for f in measures])))
 
     for state in ['WE','CB']:
         files_to_read = [f for f in measures if f'{state}_' in f]
@@ -229,8 +238,11 @@ def MSD_file_writer(measures):
                 # Initialize an empty dictionary to store the msd values for each fo value
                 msd_dict = {}
                 for fo_val in fo_values:
-                    m = [f for f in files_to_read if f'a_{a_val}' in f and f'h_{h_val}' in f and f'fo_{float(fo_val):.2f}.' in f][0]
-                    t, V, Vw, E, bxw, byw, rxw, ryw, txw, tyw, vbw, vrw, vpw, xm_CM, ym_CM, zm_CM = np.loadtxt(m, unpack=True)   
+                    #m = [f for f in files_to_read if f'a_{a_val}' in f and f'h_{h_val}' in f and f'fo_{float(fo_val):.2f}_r2' in f]
+                    m = [f for f in files_to_read if f'a_{a_val}' in f and f'h_{h_val}' in f and f'fo_{float(fo_val):.2f}' in f]
+                    m = m[0]
+                    #t, xm_CM, ym_CM, zm_CM = np.loadtxt(m, unpack=True)  
+                    t, V, Vw, E, bxw, byw, rxw, ryw, txw, tyw, vbw, nulo1, nulo2, xm_CM, ym_CM, zm_CM = np.loadtxt(m, unpack=True)
                     a = a_val
                     fo = fo_val
                     l = 240
@@ -294,11 +306,35 @@ def MSD_calculator(xm_CM, ym_CM, t, l, frac_data):
         
     return msd, dt
 
+def a_from_file (File):
+  fs = File.split("/")[-1].split("_")
+  fl = len(fs)
+  pad = fs[-7].replace("", "")
+  return int(pad) # return a value
+
+def h_from_file (File):
+  fs = File.split("/")[-1].split("_")
+  fl = len(fs)
+  pad = int(fs[-5].replace("", ""))
+  return pad # return h value
+
+def state_from_file (File):
+  fs = File.split("/")[-1].split("_")
+  fl = len(fs)
+  pad = fs[0].replace("/", "")
+  return pad # return state value
+
+def fo_from_file (File):
+  fs = File.split("/")[-1].split("_")
+  fl = len(fs)
+  pad = fs[-1].replace(".dsf","")
+  return pad # return fo value
+
 if __name__ == '__main__':
     #MSD_plotter('WE', '8', '10', '0 0.5 1 2 5 10')
     #MSD_plotter('CB', '8', '10', '0 0.5 1 2 5 10')
-    MSD_fixed_plotter('a',  [5, 8, 11], '0 0.5 2 5 10')
-    MSD_fixed_plotter('CI', ["WE", "CB"], '0 0.5 2 5 10')
+    MSD_fixed_plotter('a',  [5, 8, 11], '0 0.5 2 3 4 5')
+    #MSD_fixed_plotter('CI', ["WE", "CB"], '0 0.5 2 5 10')
 
 
 
