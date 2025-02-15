@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from kneed import KneeLocator
 
-
+PATH = str(os.path.abspath(__file__)).replace("peak_detect/un-supervised_peak_detect.py","")
 COLORS = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', '#FF5733', '#DAF7A6']
 PARAM = {
     'var': 'B',
@@ -58,20 +58,23 @@ def Un_Sup_Peak_Det(var=None, a=None, h=None):
     # Figure init
     fig = plt.figure(figsize=(7*columns,10))
     fig.suptitle('a = '+ str(a) + ' and h = ' + str(h), fontsize=25)
-    plt.rcParams['font.size'] = '15'
+    plt.rcParams['font.size'] = '20'
 
     #--------------------------------------------------------------------------------------
     # Graphics generator loop
     for f in files_to_read:
         
-        t, V, Vw, E, bxw, byw, rxw, ryw, txw, tyw, vbw, vrw, vpw, x_CM, y_CM, z_CM = np.loadtxt(f, unpack=True)
-        
+        t, V, Vw, E, bxw, byw, rxw, ryw, txw, tyw, vbw, nulo1, nulo2, x_CM, y_CM, z_CM = np.loadtxt(f, unpack=True)
+        state = af.state_from_file(f)
+        fo = af.fo_from_file(f)
+        print(fo)
+
         if PARAM['var'] == 'theta':
             xTS = txw
             yTS = tyw
             x_limits = (80, 160)
-            labeling_x = r"$\theta_x$"
-            labeling_y = r"$\theta_y$"
+            labeling_x = r"$\theta_c$"
+            labeling_y = r"$Freq(\theta_c)$"
             cri = PARAM['min_theta']
         elif PARAM['var'] == 'B':
             xTS = bxw
@@ -80,34 +83,54 @@ def Un_Sup_Peak_Det(var=None, a=None, h=None):
             labeling_x = r"$B_x$"
             labeling_y = r"$B_y$"
             cri = PARAM['w']
+        elif PARAM['var'] == 'e':
+            folders = [fol for fol in os.listdir(PATH+'video/') if fol.startswith('movie')]
+            folders = [fol for fol in folders if f'movie{state}' in fol]
+            folders = [fol for fol in folders if f'_fo{fo}' in fol]
+            x_limits = (0, 1)
+            labeling_x = r"$e$"
+            if len(folders) < 1:
+                # Skip this for loop iteration
+                continue
+            else:
+                t, x0, y0, a1, a2, e = np.loadtxt(f"{PATH}video/{folders[0]}/ellipses.txt", unpack=True)
+
+            xTS = e
+            yTS = []
         else:
             print("Invalid 'var' parameter")
             return
 
-        state = af.state_from_file(f)
         N = 1
         leg_loc = 'lower left'
         if state == 'WE':
             N = columns+1 
             leg_loc = 'upper left'
         
-        # Find the list index of fo in fo_values
-        fo = af.fo_from_file(f)
-        fo_loc = np.where(fo_values == fo)[0][0]
+        # Find the list index of fo in sorted float fo_values
+
+        fo_loc = np.where(np.sort(np.array(fo_values, dtype=float)) == float(fo))[0][0]
         print(f"\n~~~~~~~~Plotting histogram a = {PARAM['a']}, f = {fo} and {state}~~~~~~~~")
 
         #================================HISTOGRAMS================================
         sample = len(t)//PARAM['samp_frac']
-        plt.subplot(2,columns,N+fo_loc)
+        ax = plt.subplot(2,columns,N+fo_loc)
 
         xTS = xTS[sample:]
-        yTS = yTS[sample:]
-
-        train_data = np.append(bxw[sample:], byw[sample:]).reshape(-1, 1)
+        if PARAM['var'] != 'e':
+            yTS = yTS[sample:]
+            train_data = np.append(bxw[sample:], byw[sample:]).reshape(-1, 1)
+        else:
+            train_data = xTS.reshape(-1, 1)
+        
         best_k = best_k_estimator(train_data, 1, 10)
         k = -1
         pred = best_k.predict(train_data)
-        valid_data = np.append(xTS, yTS).reshape(-1, 1)
+
+        if PARAM['var'] != 'e':
+            valid_data = np.append(xTS, yTS).reshape(-1, 1)
+        else:
+            valid_data = xTS.reshape(-1, 1)
         
         while k < 1:
 
@@ -128,7 +151,7 @@ def Un_Sup_Peak_Det(var=None, a=None, h=None):
                     plt.xlim(x_limits)
                     plt.ylim(10**(-5), 1.3)
                     plt.legend(loc=leg_loc)
-                    plt.title(PARAM['var'] + r' $\mu$='+ str(fo) +' state ' + state)
+                    plt.title(labeling_x + r' $\mu$='+ str(fo) +' state ' + state)
 
             max_freq = np.ones(len(classes))
             for c in range(len(classes)):
@@ -137,6 +160,8 @@ def Un_Sup_Peak_Det(var=None, a=None, h=None):
             
             while len(np.unique(pred)) != aux:
                 aux = len(np.unique(pred))
+                if PARAM['var'] == 'e':
+                    PARAM['w'] = 0.01
                 pred = merge_classes(pred, means, max_freq, criterion=PARAM['w'])
                 classes = np.unique(pred)
                 # Updating means and max_freqs
@@ -152,10 +177,12 @@ def Un_Sup_Peak_Det(var=None, a=None, h=None):
         # Final adjustments
         save_dir = str(os.path.abspath(__file__)) 
         save_dir = save_dir.replace('/'+save_dir.split('/')[-1], "")
+        ax.set_xlabel(labeling_x)
+        ax.set_ylabel(labeling_y)
         fig.tight_layout()
         fig.savefig(f"{save_dir}/{PARAM['var']}_hist_h_{PARAM['h']}_a{PARAM['a']}.pdf", format='pdf')
         # Add a line in a txt file with the respective columns: fo [m for m in means]
-        with open(f"{save_dir}/{PARAM['var']}_means_h_{PARAM['h']}_a{PARAM['a']}.txt", 'a') as out:
+        with open(f"{save_dir}/{PARAM['var']}_means_h_{PARAM['h']}_a_{PARAM['a']}.txt", 'a') as out:
             out.write(f"{state}, {fo}, {means}, {stds}\n")
     print("-----------------------------------End------------------------------------\n")
 
@@ -221,4 +248,13 @@ def best_k_estimator(data, init, fin):
 
 
 if __name__ == '__main__':
+    Un_Sup_Peak_Det(var='theta', a=5, h=10)
+    Un_Sup_Peak_Det(var='theta', a=6, h=10)
+    Un_Sup_Peak_Det(var='theta', a=7, h=10)
     Un_Sup_Peak_Det(var='theta', a=8, h=10)
+    Un_Sup_Peak_Det(var='theta', a=9, h=10)
+    Un_Sup_Peak_Det(var='theta', a=10, h=10)
+    Un_Sup_Peak_Det(var='theta', a=11, h=10)
+    #Un_Sup_Peak_Det(var='e', a=5, h=10)
+    #Un_Sup_Peak_Det(var='e', a=11, h=10)
+    #Un_Sup_Peak_Det(var='e', a=8, h=10)
