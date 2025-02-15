@@ -38,7 +38,7 @@ def video_maker(state, fo_values, interval=1, start_line=20):
     # Transform the values into a list of floats
     fo_values = [i for i in fo_values.split()]
 
-    config_dict = af.file_crawler()['config']
+    config_dict = af.file_crawler()['base']
     # filter all the config files that has the selected state
     files_to_read = [f for f in config_dict if f'{state}_' in f]
     # filter all the config files that has the selected fo in the list fo_values
@@ -270,7 +270,10 @@ def ellipse_statistics(var, a, h=10):
 if __name__ == '__main__':
     #video_maker('WE', '1', interval=1, start_line=20)
     #video_maker('WE', '2', interval=1, start_line=20)
-    #video_maker('WE', '5', interval=1, start_line=20)
-    #video_maker('WE', '10', interval=1, start_line=20)
+    #video_maker('WE', '6', interval=1, start_line=20)
+    #video_maker('WE', '7', interval=1, start_line=20)
+    #video_maker('CB', '6', interval=1, start_line=20)
+    #video_maker('CB', '7', interval=1, start_line=20)
     ellipse_statistics('e', 5)
     ellipse_statistics('e', 11)
+    ellipse_statistics('e', 8)
