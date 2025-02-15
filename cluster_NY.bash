@@ -42,7 +42,7 @@ cd $dir_name
 #===============================================================================
 
 #./gota.out -L ${L} -R ${R} -a ${a} -h ${h} -w ${w} -dt ${dt} -fo ${fo} -CI ${CI} -s  12345567
-sbatch ./Ber${CI}_${a}_${h}_${fo}.sh ${L} ${R} ${a} ${h} ${w} ${dt} ${fo} ${CI}
+sbatch ./Ber${CI}_${a}_${h}_${fo}.sh ${L} ${R} ${a} ${h} ${w} ${fo} ${CI} ${dt}
 
 # Change back to the original directory
 cd -
