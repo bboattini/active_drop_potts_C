@@ -97,10 +97,10 @@ def Track_plotter_2D():
     G_dict['11'] = '11' 
 
     CI_dict = {}
-    CI_dict['WE'] = 'W'
-    CI_dict['CB'] = 'D'
+    CI_dict['WE'] = 'WE1'
+    CI_dict['CB'] = 'CB'
 
-    fig.colorbar(lc, label=r't', ax=ax)
+    fig.colorbar(lc, label=r'$t_{norm}$', ax=ax)
     ax.set_title(f"a={G_dict[str(a)]} CI={CI_dict[state]} "+r"$\mu$="+f"{fo}")
 
     # Create a circle
