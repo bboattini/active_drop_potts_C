@@ -4,6 +4,9 @@ import pwlf
 import matplotlib.pyplot as plt
 import app.aux_func as af
 import os
+from app.MSD.MSD_sup_fit import Sup_linear_fit
+import warnings
+warnings.filterwarnings("ignore")
 
 PATH = str(os.path.abspath(__file__))
 PATH = PATH.replace(PATH.split("/")[-1], "")
@@ -119,6 +122,7 @@ def MSD_linear_fit(state=None, a=None, h=None, limit=None, break_n=3, lim_frac=0
     plt.savefig(f"{PATH}fit_msd_a_{a}_h_{h}_{state}.png", dpi=300)
     # clear plt
     plt.clf()
+
 PARAM = {'vert': 'a', 
          'hori': 'h',
          'multi': 'CI',
@@ -136,7 +140,13 @@ def MSD_diagram(var = PARAM['var'], config=None, limit='all', break_n=3, lim_fra
     if limit == 'all':
         limit = ''
         for i in fo_values:
-            limit += str(i)+' '
+            if i != 0:
+                if i<1:
+                    limit += f'{i:.1f} '
+                else:
+                    limit += str(int(i))+' '
+            else:
+                limit += '0 '
     # Transform the values into a list of floats
     limit = [i for i in limit.split()]
     limit = np.sort(np.array(limit))
@@ -146,7 +156,7 @@ def MSD_diagram(var = PARAM['var'], config=None, limit='all', break_n=3, lim_fra
     
     # Check if there is a "msd_files" folder in this directory in PATH
     if 'msd_files' not in os.listdir(PATH):
-        print("Run MSD_plot first")
+        print("\nERRO!!!! Run MSD_plot first")
         return
     # --------------------------------------------------------------------------------------
     # User input
@@ -176,7 +186,7 @@ def MSD_diagram(var = PARAM['var'], config=None, limit='all', break_n=3, lim_fra
     elif var == 'slope':
         y_limits = (0, 2)
         labeling_y = r"$1^{st}$ slope"
-        leg_loc = "upper right"
+        leg_loc = "lower right"
     else:
         print("Invalid 'var' parameter")
         return
@@ -239,7 +249,7 @@ def MSD_diagram(var = PARAM['var'], config=None, limit='all', break_n=3, lim_fra
                 ax.set_yscale("log")
                 ax.set_xscale("log")
             ax.set_yscale("log")
-            ax.set_xscale("log")
+            #ax.set_xscale("log")
             ax.set_ylim(y_limits)
             ax.set_xlim(fo_values[1], fo_values[-2]+0.5)
             # Add labels and legend
@@ -260,12 +270,17 @@ def MSD_diagram(var = PARAM['var'], config=None, limit='all', break_n=3, lim_fra
             dados[limit[i]] = data[i,:]
 
         var_dict = {}
+        new_fit_data = False
+        if 'fit_files' not in os.listdir(PATH):
+            new_fit_data = True
         for i in range(1, len(dados.items())):
             msd = np.array(list(dados.values())[i])
             # Create a logarithmically spaced list of indices
             indices = np.logspace(0, np.log10(len(dt)-1), 20).astype(int)
-            # Define the color for the current m
+            state = msd_file.split("/")[-1].split("_")[-1].replace(".txt", "")
             fo = str(list(dados.keys())[i])
+            a = msd_file.split("/")[-1].split("_")[-4]
+            h = msd_file.split("/")[-1].split("_")[-2]
             # Index of the neerest value to dt[-1]*lim_frac
             lim_index = np.where(dt < dt[-1]*lim_frac)[0][-1]
 
@@ -276,14 +291,15 @@ def MSD_diagram(var = PARAM['var'], config=None, limit='all', break_n=3, lim_fra
             else:
                 breaks = my_pwlf.fit(break_n)
             slopes = my_pwlf.calc_slopes()
+
             # Find the coresponding msd point for the break[0] point
-            break_index = np.where(dt < np.exp(breaks[1]))[0][-1]
+            print(f"fo={fo}, slopes={slopes}, breaks={breaks}")
+            break_index = np.where(dt < np.exp(breaks[0]))[0][-1]
             dr = msd[break_index]
             var_dict['p_length'] = np.sqrt(dr)
-            var_dict['p_time'] = np.exp(breaks[1])
+            var_dict['p_time'] = np.exp(breaks[0])
             var_dict['slope'] = slopes[0]
 
-            print(f"fo={fo}, slopes={slopes}")
             if f"{af.COLORS[cur]}" not in legend_added[ax]:
                 ax.plot(float(fo), var_dict[var], af.MARKERS[cur], label=f"{PARAM['multi']}={curve_index}", color=af.COLORS[cur])
                 legend_added[ax].append(f"{af.COLORS[cur]}")
@@ -308,8 +324,8 @@ if __name__ == "__main__":
     #MSD_linear_fit('WE', '11', '10', '1 3 5 8 10')
     #MSD_linear_fit('CB', '11', '10', '1 3 5 8 10')
     MSD_diagram('p_length', ('h', 'a'))
-    MSD_diagram('p_time', ('h', 'a'))
+    #MSD_diagram('p_time', ('h', 'a'))
     MSD_diagram('slope', ('h', 'a'))
-    MSD_diagram('p_length', ('h', 'CI'))
-    MSD_diagram('p_time', ('h', 'CI'))
-    MSD_diagram('slope', ('h', 'CI'))
+    #MSD_diagram('p_length', ('h', 'CI'))
+    #MSD_diagram('p_time', ('h', 'CI'))
+    #MSD_diagram('slope', ('h', 'CI'))
